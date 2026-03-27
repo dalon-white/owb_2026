@@ -1,0 +1,163 @@
+---
+title: "Correspondence Analysis of OWB Import Data — PG32 Parameter"
+author: ""
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width  = 9,
+  fig.height = 7
+)
+
+library(here)
+library(almanac)
+library(CA3variants)
+library(openxlsx)
+library(knitr)
+```
+
+## Overview
+
+This report presents a three-way Non-Symmetric Correspondence Analysis (NSCA3)
+examining the association between:
+
+- **Trap result** (row / term I): whether an OWB trap collection occurred within
+  a given monitoring window
+- **Country of origin** (column / term J): country associated with the imported
+  shipment
+- **Commodity** (tube / term K): commodity description from CBP/HTS data
+
+Data source: `01-imports_PG32_origin_2026.02.04.csv`
+
+---
+
+## Load Processed Data
+
+```{r load-data}
+pg32Data <- readRDS(here::here("data", "processed", "pg32Data.rds"))
+
+formatData.pg32.AllTraps <- readRDS(
+  here::here("data", "processed", "formatData_pg32_AllTraps.rds")
+)
+
+kable(head(formatData.pg32.AllTraps, 10), caption = "First 10 rows of formatted data")
+```
+
+---
+
+## Build the Contingency Table
+
+```{r contingency-table}
+contingency.pg32.AllTraps <- table(formatData.pg32.AllTraps[, c(2, 3, 4)])
+
+cat("Contingency table dimensions:\n")
+cat("  Trap result (I) x Country (J) x Commodity (K) =",
+    paste(dim(contingency.pg32.AllTraps), collapse = " x "), "\n")
+```
+
+---
+
+## Tune the Number of Dimensions
+
+The `tunelocal` function helps identify the optimal number of dimensions for
+the NSCA3 model. The response variable is the row (trap result).
+
+```{r tune-dimensions}
+tune.pg32.AllTraps <- tunelocal(contingency.pg32.AllTraps,
+                                ca3type = 'NSCA3',
+                                resp    = 'row')
+plot(tune.pg32.AllTraps)
+```
+
+---
+
+## Fit the NSCA3 Model
+
+Based on the tuning plot, dimensions `c(2, 4, 4)` are selected:
+
+- **2 dimensions** for the trap-result (row) component
+- **4 dimensions** for country (column) and commodity (tube) components
+
+Increasing the column/tube dimensions to 5 pushes explained inertia above the
+70 % threshold recommended by Beh & Lombardo.
+
+```{r fit-model}
+ca3.pg32.AllTraps <- CA3variants(contingency.pg32.AllTraps,
+                                  ca3type = 'NSCA3',
+                                  resp    = 'row',
+                                  dims    = c(2, 4, 4))
+ca3.pg32.AllTraps
+```
+
+---
+
+## Biplots
+
+### Row component (Trap result)
+
+```{r biplot-row}
+plot(ca3.pg32.AllTraps, biptype = "row", addlines = FALSE, scaleplot = 15)
+```
+
+### Column component (Country)
+
+```{r biplot-col}
+plot(ca3.pg32.AllTraps, biptype = "col", addlines = FALSE, scaleplot = 15)
+```
+
+### Tube component (Commodity)
+
+```{r biplot-tube}
+plot(ca3.pg32.AllTraps, biptype = "tube", addlines = FALSE, scaleplot = 15)
+```
+
+---
+
+## Inner-Product Matrix
+
+The inner-product matrix indicates the strength of the association between
+trap-result categories, countries, and commodities.
+
+```{r inner-products}
+kable(t(ca3.pg32.AllTraps$iproductijk),
+      caption = "Inner-product matrix (transposed)")
+```
+
+---
+
+## Save Output
+
+```{r save-output}
+myToday           <- as.character(Sys.Date())
+outPrefixFileName <- 'correspondence_commodity_country_2.4.4dims'
+outfile           <- paste0(outPrefixFileName, '_', myToday, '.xlsx')
+outDirFile        <- here::here("output", "data", outfile)
+
+wb <- createWorkbook(outPrefixFileName)
+addWorksheet(wb, sheetName = myToday)
+writeData(wb, myToday,
+          x        = t(ca3.pg32.AllTraps$iproductijk),
+          rowNames = TRUE)
+saveWorkbook(wb, file = outDirFile, overwrite = TRUE)
+
+cat("Output saved to:", outDirFile, "\n")
+```
+
+---
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```

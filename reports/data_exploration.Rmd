@@ -1,0 +1,45 @@
+---
+title: "OWB Import Data — Exploration"
+author: ""
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
+
+library(here)
+```
+
+## Load Data
+
+```{r load-data}
+# Load raw or processed data for exploration
+# pg32Data <- readRDS(here::here("data", "processed", "pg32Data.rds"))
+```
+
+---
+
+## Overview / Summary
+
+```{r summary}
+# str(pg32Data)
+# summary(pg32Data)
+```
+
+---
+
+## Exploration Notes
+
+<!-- Add your exploratory analysis, plots, and notes below -->
+

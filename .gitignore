@@ -1,0 +1,14 @@
+# R project files
+*.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# Generated outputs (re-created by the pipeline)
+output/data/*.xlsx
+output/visualizations/*.png
+output/reports/*.html
+
+# OS / editor artifacts
+.DS_Store
+Thumbs.db
